@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Disruptor Demo</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/sockjs/0.3.4/sockjs.min.js"></script>
+        <script src="vertx-eventbus.js"></script>
+        <style>
+            .inset {
+              box-shadow: inset 0 0 4px #000000;
+              -moz-box-shadow: inset 0 0 4px #000000;
+              -webkit-box-shadow: inset 0 0 4px #000000;
+              width: 400px;
+              border-width: 4px;
+              padding: 5px;
+            }
+
+            input.inset {
+              height: 40px;
+            }
+
+            div.inset {
+              height: 500px;
+              white-space: pre-wrap
+            }
+            
+            .full-width {
+                min-width: 100%;
+                width:100%;
+            }
+            
+            .main-header {
+              text-align: center;
+              background: #1abc9c;
+              color: white;
+              font-size: 30px;
+            }
+            .section-header {
+              vertical-align: middle;
+              text-align: center;
+              background: #FFCE00;
+              color: white;
+              font-size: 20px;
+              height: 20%;
+              min-width: 160px;
+            }
+            .section-value {
+              display: inline-block;
+              vertical-align: middle;
+              text-align: center;
+              color: black;
+              font-size: 80px;
+              height: 80%;
+              width: 100%;
+            }
+            .container {
+                display: flex;
+                flex-flow:row;
+                margin: 20px 20px 20px 20px;
+            }
+            .section-container {
+                display: flex;
+                width: 100%;
+                flex-flow:column;
+                text-align: center;
+            }
+            .section {
+                display: flex;
+/*                border-radius: 15px;*/
+/*
+                min-height: 150px;
+                min-width: 150px;
+*/
+/*                 width: 20%; */
+/*                border-radius: 10px;
+                border: 3px solid #BADA55;*/
+                flex-flow:column;
+/*                 text-align: center; */
+            }
+            .button {
+              background-color: #f4511e;
+              border: none;
+              color: white;
+              padding: 16px 32px;
+              text-align: center;
+              font-size: 16px;
+              margin: 4px 2px;
+              opacity: 0.6;
+              transition: 0.3s;
+              display: inline-block;
+              text-decoration: none;
+              cursor: pointer;
+              margin-top: 15px;
+              align-self: center;
+            }
+            .counter {
+              border-radius: 15px;
+              background: #b2ad7f;
+              padding: 10px;
+              width: 100px;
+              height: 30px;
+              font-family: "arial";
+              font-size: 28px;
+              font-weight: bold;
+              vertical-align: central;
+              text-align: center;
+              color: white;
+              align-self: center;
+            }
+            .single {
+	            width: 121px;
+	            height: 161px;
+	            margin: 20px 0px 20px 0px;
+	            align-self: center;
+            }
+            .multi {
+	            width: 242px;
+	            height: 161px;
+	            margin: 20px 0px 20px 0px;
+	            align-self: center;
+            }
+            .button {
+	            width: 150px;
+            }
+        </style>
+        <script>
+            var eb = new EventBus("/eventbus/");
+            eb.onopen = function () {
+              eb.registerHandler("app.to.console", function (err, msg) {
+                  obj = JSON.parse(msg.body);
+                  var design = obj["design"];
+                  var produced = obj["produced"];
+                  var consumed = obj["consumed"];
+                  var pub = document.getElementById("published-"+design);
+                  pub.innerHTML = produced;
+                  var csr = document.getElementById("consumed-"+design);
+                  csr.innerHTML = consumed;
+              });
+            };
+            eb.onerror = function (err) {
+                console.log(err);
+            };
+            function demoAction(design) {
+                var message = {};
+                message['design'] = design;
+                var json= JSON.stringify(message);
+                eb.publish("console.to.app", json);
+                var button = document.getElementById('button-' + design);
+                var pub = document.getElementById("published-"+design);
+                pub.innerHTML = "0";
+                var csr = document.getElementById("consumed-"+design);
+                csr.innerHTML = "0";
+                if (button.innerHTML === "Start") {
+                    button.innerHTML = "Stop";
+                } else {
+                    button.innerHTML = "Start";
+                }
+            }
+        </script>
+    </head>
+    <body>
+        <div class="main-header">Event Metrics</div>
+        <div class="container">
+            <div class="section-container">
+                <div class="section">
+                    <span class="counter" id="published-s2srx">0</span>
+                    <img class="single" src="events-s2srx.png" alt="Single Rx" />
+                    <span class="counter" id="consumed-s2srx">0</span>
+                    <button class="button" id="button-s2srx" onclick="demoAction('s2srx')">Start</button>
+                </div>
+            </div>
+            <div class="section-container">
+                <div class="section">
+                    <span class="counter" id="published-m2srx">0</span>
+                    <img class="multi" src="events-m2srx.png" alt="Multi Rx" />
+                    <span class="counter" id="consumed-m2srx">0</span>
+                    <button class="button" id="button-m2srx" onclick="demoAction('m2srx')">Start</button>
+                </div>
+            </div>
+            <div class="section-container">
+                <div class="section">
+                    <span class="counter" id="published-s2sdrp">0</span>
+                    <img class="single" src="events-s2sdrp.png" alt="Single Disruptor" />
+                    <span class="counter" id="consumed-s2sdrp">0</span>
+                    <button class="button" id="button-s2sdrp" onclick="demoAction('s2sdrp')">Start</button>
+                </div>
+            </div>
+            <div class="section-container">
+                <div class="section">
+                    <span class="counter" id="published-m2sdrp">0</span>
+                    <img class="multi" src="events-m2sdrp.png" alt="Multi Disruptor" />
+                    <span class="counter" id="consumed-m2sdrp">0</span>
+                    <button class="button" id="button-m2sdrp" onclick="demoAction('m2sdrp')">Start</button>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
