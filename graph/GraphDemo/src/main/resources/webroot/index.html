@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Graph Demo</title>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+           integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+           crossorigin="" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/sockjs/0.3.4/sockjs.min.js"></script>
+        <script src="vertx-eventbus.js"></script>
+        <!-- Make sure you put this AFTER Leaflet's CSS -->
+        <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+          integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+          crossorigin=""></script>
+        <script src='https://unpkg.com/leaflet-arc/bin/leaflet-arc.min.js'></script>
+        <style>
+            input.inset {
+              height: 40px;
+            }
+
+            div.inset {
+              height: 500px;
+              white-space: pre-wrap
+            }
+            
+            .full-width {
+                min-width: 100%;
+                width:100%;
+            }
+            
+            .main-header {
+              text-align: center;
+              background: #1abc9c;
+              color: white;
+              font-size: 30px;
+            }
+            .map {
+                display: flex;
+                width: 100%;
+                flex-flow:column;
+                text-align: center;
+            }
+            .container {
+                display: flex;
+                flex-flow:row;
+                margin: 20px 20px 20px 20px;
+            }
+            .section {
+                display: flex;
+                flex-flow:column;
+            }
+            .button {
+              background-color: #f4511e;
+              border: none;
+              color: white;
+              padding: 16px 32px;
+              text-align: center;
+              font-size: 16px;
+              margin: 4px 2px;
+              opacity: 0.6;
+              transition: 0.3s;
+              display: inline-block;
+              text-decoration: none;
+              cursor: pointer;
+              margin-top: 15px;
+              align-self: center;
+            }
+            .airport {
+              background-color: orange;
+              border: none;
+              color: white;
+              padding: 16px 32px;
+              text-align: center;
+              font-size: 10px;
+              margin: 4px 2px;
+              opacity: 0.6;
+              transition: 0.3s;
+              display: inline-block;
+              text-decoration: none;
+              cursor: pointer;
+              margin-top: 15px;
+              align-self: center;
+            }
+            .airline {
+              background-color: green;
+              border: none;
+              color: white;
+              padding: 8px 16px;
+              text-align: center;
+              font-size: 8px;
+              margin: 4px 2px;
+              opacity: 0.6;
+              transition: 0.3s;
+              display: inline-block;
+              text-decoration: none;
+              cursor: pointer;
+              margin-top: 5px;
+              align-self: center;
+            }
+            #paths {
+              display: flex;
+              flex-direction: column;
+            }
+            .route {
+              display: flex;
+              flex-direction: row;
+            }
+            .path-button {
+              background-color: blueviolet;
+              border: none;
+              color: white;
+              padding: 8px 16px;
+              text-align: center;
+              font-size: 8px;
+              margin: 4px 2px;
+              opacity: 0.6;
+              transition: 0.3s;
+              display: inline-block;
+              text-decoration: none;
+              cursor: pointer;
+              margin-top: 5px;
+              align-self: center;
+            }
+            input[type=text] {
+                padding:2px; 
+                border:2px solid #ccc; 
+                -webkit-border-radius: 5px;
+                border-radius: 5px;
+                font-size: 24px;
+                margin-left: 5px;
+                align-self: center;
+            }
+            input[type=text]:focus {
+                border-color:#333;
+            }
+            .label {
+                font-size: 24px;
+                margin-left: 5px;
+                align-self: center;
+            }
+        </style>
+        <script>
+
+        </script>
+    </head>
+    <body>
+        <div class="main-header">Graph Demo - Global Air Routes</div>
+        <div class="map" id="mapid" style="width: 1200px; height: 600px; text-align: center;"></div>
+        <div class="container">
+            <label class="label" for="origin">Origin</label>
+            <input type="text" id="origin" name="origin" value="">
+            <label class="label" for="dest">Destination</label>
+            <input type="text" id="dest" name="dest" value="">
+            <button class="button" onclick="graphAction()">Query</button>
+        </div>
+        <div class="section">
+            <div id="paths"></div>
+        </div>
+    </body>
+    <script>
+        var hashMapAirports = {};
+        var globalMarkers = new Array();
+        var globalArcs = new Array();
+        
+        document.querySelector('body').addEventListener('click', function(event) {
+          if (event.target.className.toLowerCase() === 'airport') {
+              clearMap();
+              var code = event.target.innerHTML;
+              graphAirport(code);
+          }
+          if (event.target.className.toLowerCase() === 'path-button') {
+              clearMap();
+              var pathStr = event.target.innerHTML;
+              console.log("path " + pathStr);
+              plotPath(pathStr);
+          }
+        });
+        
+        var mymap = L.map('mapid').setView([0.00, 0.00], 2);
+
+        L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+                maxZoom: 18,
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+                        '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+                        'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+                id: 'mapbox/streets-v11',
+                tileSize: 512,
+                zoomOffset: -1
+        }).addTo(mymap);
+
+        
+        var eb = new EventBus("/eventbus/");
+        eb.onopen = function () {
+          eb.registerHandler("api.to.console", function (err, msg) {
+              console.log(msg.body);
+              obj = JSON.parse(msg.body);
+              var action = obj.action;
+              if (action === 'routes') {
+                  processRoutes(obj.routes);
+              } else if (action === 'airport') {
+                  processAirport(obj.airport);
+              } else if (action === 'airports') {
+                  processAllAirports(obj.airports);
+              }
+          });
+          
+          loadAirports();
+        };
+        eb.onerror = function (err) {
+            console.log(err);
+        };
+
+        function loadAirports() {
+            var message = {};
+            message['action'] = 'airports';
+            var json= JSON.stringify(message);
+            eb.publish("console.to.api", json);
+        }
+
+
+        function graphAction(design) {
+            clearPaths();
+            clearMap();
+            var message = {};
+            var origin = document.getElementById('origin');
+            var destination = document.getElementById('dest');
+            message['origin'] = origin.value.toUpperCase();
+            message['destination'] = destination.value.toUpperCase();
+            message['stops'] = 2;
+            message['action'] = 'routes';
+            var json= JSON.stringify(message);
+            eb.publish("console.to.api", json);
+        }
+        function graphAirport(code) {
+            var message = {};
+            message['code'] = code.toUpperCase();
+            message['action'] = 'airport';
+            var json= JSON.stringify(message);
+            eb.publish("console.to.api", json);
+        }
+        function processRoutes(paths) {
+            var routesDiv = document.getElementById('paths');
+            var rDiv = document.createElement('div');
+            rDiv.className = 'route';
+            var rOrigin = document.createElement('button');
+            rOrigin.className = 'airport';
+            var rDest = document.createElement('button');
+            rDest.className = 'airport';
+            var rAL = document.createElement('button');
+            rAL.className = 'airline';
+            var rPath = document.createElement('button');
+            rPath.className = 'path-button';
+
+            for ( var pathIndex = 0; pathIndex < paths.length; pathIndex++) {
+                var routes = paths[pathIndex];
+                var routeDiv = rDiv.cloneNode();
+                var pathStr = "";
+                for ( var routeIndex = 0; routeIndex < routes.length; routeIndex++) {
+                    var route = routes[routeIndex];
+                    var destStr = route["destination"];
+                    var airlineStr = route["airline"];
+                    if (routeIndex === 0) {
+                        var originStr = route["origin"];
+                        var originButton = rOrigin.cloneNode();
+                        originButton.innerHTML = originStr;
+                        routeDiv.appendChild(originButton);
+                        pathStr += originStr;
+                    }
+                    var airlineButton = rAL.cloneNode();
+                    airlineButton.innerHTML = airlineStr;
+                    routeDiv.appendChild(airlineButton);
+                    var destinationButton = rDest.cloneNode();
+                    destinationButton.innerHTML = destStr;
+                    routeDiv.appendChild(destinationButton);
+                    pathStr = pathStr + "-" + destStr;
+                }
+                var pathButton = rPath.cloneNode();
+                pathButton.innerHTML = pathStr;
+                routeDiv.appendChild(pathButton);
+                
+                routesDiv.appendChild(routeDiv);
+            }
+        }
+        function processAirport(airport) {
+            var code = airport.code;
+            var latitude = airport.latitude;
+            var longitude = airport.longitude;
+            var airportMarker = L.marker([latitude, longitude]).addTo(mymap);
+            globalMarkers.push(airportMarker);
+        }
+        function processAllAirports(airports) {
+            for (var index = 0; index < airports.length; ++index) {
+                var airport = airports[index];
+                hashMapAirports[airport.code] = airport;
+            }
+        }
+        function plotPath(pathStr) {
+            var codes = pathStr.split("-");
+            for (var index = 0; index < codes.length; ++index) {
+                var code = codes[index];
+                var airport = hashMapAirports[code];
+                var airportMarker = L.marker([airport.latitude, airport.longitude]).addTo(mymap);
+                globalMarkers.push(airportMarker);
+                if (index > 0) {
+                    var prev_code = codes[index-1];
+                    var prev_airport = hashMapAirports[prev_code];
+                    var line = L.Polyline.Arc([prev_airport.latitude, prev_airport.longitude], [airport.latitude, airport.longitude], 'red', 200).addTo(mymap);
+                    globalArcs.push(line);
+                }
+            }
+        }
+        function clearPaths() {
+            const paths = document.getElementById("paths");
+            paths.innerHTML = '';
+        }
+        function clearMarkers() {
+            for (var index = 0; index < globalMarkers.length; ++index) {
+                mymap.removeLayer(globalMarkers[index]);
+            }
+            globalMarkers = [];
+        }
+        function clearArcs() {
+            for (var index = 0; index < globalArcs.length; ++index) {
+                mymap.removeLayer(globalArcs[index]);
+            }
+            globalArcs = [];
+        }
+        function clearMap() {
+            clearMarkers();
+            clearArcs();
+        }
+    </script>
+</html>
