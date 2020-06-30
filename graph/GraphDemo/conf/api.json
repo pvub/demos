@@ -1,5 +1,6 @@
 {
     "port": 10800,
     "airports": "data/airports.csv",
-    "routes": "data/routes.csv"
+    "routes": "data/routes.csv",
+    "load-graph": true
 }

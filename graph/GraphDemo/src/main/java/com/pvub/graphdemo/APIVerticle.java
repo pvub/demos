@@ -139,13 +139,17 @@ public class APIVerticle extends AbstractVerticle {
             );
         
         m_graph = new Graph();
-        
-        //load();
-        
+
+        if (m_config.getBoolean("load-graph", false)) {
+            load();
+        }
+
         // Register to listen for messages coming IN to the server
-        vertx.eventBus().consumer("console.to.api").handler(message -> {
-            handleConsoleMessage(message);
-        });
+        vertx.eventBus().consumer("console.to.api")
+          .handler(
+              message -> {
+                handleConsoleMessage(message);
+              });
     }
     
     @Override
