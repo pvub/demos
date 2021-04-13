@@ -1,0 +1,15 @@
+{
+  "mixer-address": "mixerAddress",
+  "coin-network": "https://jobcoin.gemini.com/scaling-snugness/api",
+  "port": 8090,
+  "users": [
+    {
+      "name" : "TestUser",
+      "initialBalance" : "50.00",
+      "sourceAddress" : "testUserAddress",
+      "destinationAddresses" : [
+        "testDestination1", "testDestination2"
+      ]
+    }
+  ]
+}
