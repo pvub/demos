@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Properties>
+        <Property name="log-pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} | %level{WARN=WARNING, DEBUG=DEBUG, ERROR=ERROR, TRACE=TRACE, INFO=INFO} | %c{1} | %t | %m %throwable{10}%n</Property>
+        <Property name="log-metrics-pattern">%d{yyyy-MM-dd HH:mm:ss.SSS} | %m</Property>
+    </Properties>
+
+    <Appenders>
+        <RollingFile name="RollingFile" fileName="api.log"
+                     filePattern="api-%d{MM-dd-yyyy-HH:mm:ss}-%i.log.gz">
+            <PatternLayout pattern="${log-pattern}" />
+            <Policies>
+                <OnStartupTriggeringPolicy minSize="100000000" />
+                <SizeBasedTriggeringPolicy size="250 MB" />
+            </Policies>
+            <DefaultRolloverStrategy max="20"/>
+        </RollingFile>
+        <Async name="AsyncFile">
+            <AppenderRef ref="RollingFile"/>
+        </Async>
+    </Appenders>
+    <Loggers>
+        <Root level="INFO">
+            <AppenderRef ref="AsyncFile"/>
+        </Root>
+    </Loggers>
+</Configuration>
